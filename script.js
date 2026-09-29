@@ -6,17 +6,10 @@ let currentTrackIndex=0;
 let currentCard=null;
 let opened=new Set();
 let specialCard={id:"final",nome:"GIOVANA",titulo:"THE LOVE FILE",icon:"💚",tipoDeAnimacao:"secret",mensagem:"Você chegou até o final. Este site inteiro foi feito para você, Renato — por todos os amigos que deixaram uma memória aqui e por quem transformou tudo isso em uma pequena cápsula do tempo. Feliz aniversário.",assinatura:"Com amor, Giovana ♥",musica:"",musicaNome:""};
-const fallback = [{"id": "fluminense", "nome": "AMIGO 1", "titulo": "STADIUM MODE", "icon": "⚽", "hint": "MATCH START • TRICOLOR POWER", "tipoDeAnimacao": "stadium", "mensagem": "Aqui vai a mensagem do amigo. O cartão pode receber histórias, fotos e uma trilha sonora escolhida por ele.", "fotos": [], "musica": "", "musicaNome": ""}, {"id": "dino", "nome": "AMIGO 2", "titulo": "JURASSIC MODE", "icon": "🦖", "hint": "FOSSIL FOUND • CHILDHOOD", "tipoDeAnimacao": "dino", "mensagem": "Uma homenagem jurássica para o Renato. Aqui entram lembranças da infância e aquela nostalgia boa.", "fotos": [], "musica": "", "musicaNome": ""}, {"id": "onepiece", "nome": "AMIGO 3", "titulo": "PIRATE MODE", "icon": "☠️", "hint": "QUEST START • NEW ADVENTURE", "tipoDeAnimacao": "pirate", "mensagem": "Uma mensagem de aventura para o capitão. Fotos, histórias e memórias podem aparecer neste cartão.", "fotos": [], "musica": "", "musicaNome": ""}, {"id": "music", "nome": "AMIGO 4", "titulo": "MUSIC MODE", "icon": "♫", "hint": "PRESS PLAY • TRACK FOUND", "tipoDeAnimacao": "music", "mensagem": "Este cartão é para uma dedicatória musical. O amigo escolhe a faixa e a música começa quando o cartão é aberto.", "fotos": [], "musica": "", "musicaNome": ""}, {"id": "books", "nome": "AMIGO 5", "titulo": "BOOK MODE", "icon": "📖", "hint": "CHAPTER FOUND • TURN PAGE", "tipoDeAnimacao": "books", "mensagem": "CAPÍTULO ESPECIAL. Uma dedicatória em formato de livro para uma amizade que merece muitas páginas.", "fotos": [], "musica": "", "musicaNome": ""}, {"id": "secret", "nome": "AMIGO 6", "titulo": "SECRET MODE", "icon": "★", "hint": "CLASSIFIED FILE • DO NOT OPEN", "tipoDeAnimacao": "secret", "mensagem": "Arquivo secreto. Esta mensagem será publicada pela administradora quando chegar a hora.", "fotos": [], "musica": "", "musicaNome": ""}];
-
 async function loadLoveFile(){try{const r=await fetch("love-file.json?v=1",{cache:"no-store"});if(r.ok){const x=await r.json();specialCard={...specialCard,...x};}}catch(e){}}
-async function loadCards(){
-  await loadLoveFile();
-  renderCards();
-  renderPlaylist();
-  window.__renatinhoLoadedCards = cards.map(c=>c.id);
-  window.dispatchEvent(new CustomEvent("renatinho:cards-loaded"));
-  if(window.__refreshPhotoBooth) window.__refreshPhotoBooth();
-}
+let musicLibrary=[];
+async function loadMusicLibrary(){try{const r=await fetch("music-library.json?v=1",{cache:"no-store"});if(r.ok){const x=await r.json();musicLibrary=Array.isArray(x.tracks)?x.tracks:[];}}catch(e){musicLibrary=[];}}
+async function loadCards(){await Promise.all([loadLoveFile(),loadMusicLibrary()]);try{const r=await fetch("cards/cards.json?v=1",{cache:"no-store"});cards=r.ok?(await r.json()):[];if(!Array.isArray(cards))cards=[];}catch(e){cards=[];}renderCards();renderPlaylist();window.__renatinhoLoadedCards=cards.map(c=>c.id);window.dispatchEvent(new CustomEvent("renatinho:cards-loaded"));if(window.__refreshPhotoBooth)window.__refreshPhotoBooth();updateFinal();}
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
@@ -86,43 +79,16 @@ function parseSpotifyRef(value){
 }
 function startMusic(c){
   stopMusic();
-  const m=c.cardConfig?.musica||{};
+  const m=c.music||c.cardConfig?.musica||{};
   const declared=m.type||"";
-  const src=c.musica||m.url||"";
-  const type=/^(spotify)$/i.test(declared) || parseSpotifyRef(src) ? "spotify" :
-    (/^(file|box)$/i.test(declared) || /^data:audio\//i.test(src) || /^audio\//i.test(src)) ? "file" : "none";
-  if(!src || type==="none")return;
-  musicName.textContent=`♫ ${c.musicaNome||"NOW PLAYING"}`;
-  musicBar.classList.remove("hidden");
-  if(type==="file"){
-    const source=/^(data:audio\/|blob:|https?:)/i.test(src)?src:new URL(src,document.baseURI).href;
-    audio=new Audio(source);
-    audio.loop=true;
-    audio.preload="auto";
-    audio.addEventListener("error",()=>{musicPause.textContent="▶";musicName.textContent=`♫ ${c.musicaNome||"AUDIO NÃO DISPONÍVEL"}`});
-    audio.load(); audio.play().catch(()=>{});
-    musicPause.textContent="❚❚";
-    return;
+  const spotifyUrl=c.spotify?.enabled?c.spotify.url:(declared==="spotify"?m.url:c.musica);
+  if(declared==="spotify"||c.spotify?.enabled||parseSpotifyRef(spotifyUrl)){
+    const ref=parseSpotifyRef(spotifyUrl);if(!ref){musicName.textContent="♫ LINK SPOTIFY INVÁLIDO";musicBar.classList.remove("hidden");musicPause.textContent="▶";return;}
+    musicName.textContent=`♫ ${c.musicaNome||"SPOTIFY"}`;musicBar.classList.remove("hidden");const iframe=document.createElement("iframe");iframe.id="externalMusic";iframe.src=`https://open.spotify.com/embed/${ref.type}/${ref.id}?utm_source=generator&autoplay=0`;iframe.allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";iframe.loading="eager";iframe.referrerPolicy="strict-origin-when-cross-origin";iframe.className="spotify-player";cardWindow.appendChild(iframe);musicPause.textContent="▶ SPOTIFY";return;
   }
-  if(type==="spotify"){
-    const ref=parseSpotifyRef(src);
-    if(!ref){
-      musicName.textContent="♫ LINK SPOTIFY INVÁLIDO";
-      musicPause.textContent="▶";
-      return;
-    }
-    const iframe=document.createElement("iframe");
-    iframe.id="externalMusic";
-    iframe.src=`https://open.spotify.com/embed/${ref.type}/${ref.id}?utm_source=generator&autoplay=0`;
-    iframe.allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
-    iframe.loading="eager";
-    iframe.referrerPolicy="strict-origin-when-cross-origin";
-    iframe.className="spotify-player";
-    cardWindow.appendChild(iframe);
-    musicPause.textContent="▶ SPOTIFY";
-  }
+  const siteId=m.id||(declared==="site"?m.id:(typeof c.musica==="string"&&!/^data:audio\//i.test(c.musica)?c.musica:""));const track=musicLibrary.find(t=>t.id===siteId);if(!track)return;
+  musicName.textContent=`♫ ${c.musicaNome||track.name}`;musicBar.classList.remove("hidden");audio=new Audio(track.src);audio.loop=true;audio.preload="auto";audio.addEventListener("error",()=>{musicPause.textContent="▶";musicName.textContent=`♫ ${c.musicaNome||"AUDIO NÃO DISPONÍVEL"}`});audio.load();audio.play().catch(()=>{});musicPause.textContent="❚❚";
 }
-
 function stopMusic(){
   if(audio){audio.pause();audio.currentTime=0;audio=null}
   document.querySelector("#externalMusic")?.remove();
@@ -221,7 +187,7 @@ $("#finalBtn")?.addEventListener("click",openFinal);
 modal.addEventListener("click",e=>{if(e.target.classList.contains("modal-backdrop"))close()});
 musicPause.addEventListener("click",()=>{if(audio){if(audio.paused){audio.play();musicPause.textContent="❚❚"}else{audio.pause();musicPause.textContent="▶"}}else{const frame=document.querySelector("#externalMusic");if(frame){frame.scrollIntoView({behavior:"smooth",block:"center"});}}});
 document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:"smooth"}) ));
-document.addEventListener("pointermove",e=>{const s=document.createElement("span");s.textContent=["✦","·","★","✧"][Math.floor(Math.random()*4)];s.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;color:#ffe04a;pointer-events:none;z-index:9998;font-weight:bold;animation:cursorFade .5s forwards`;document.body.appendChild(s);setTimeout(()=>s.remove(),500)});
+if(!window.matchMedia?.("(hover: none), (pointer: coarse)").matches) document.addEventListener("pointermove",e=>{const s=document.createElement("span");s.textContent=["✦","·","★","✧"][Math.floor(Math.random()*4)];s.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;color:#ffe04a;pointer-events:none;z-index:9998;font-weight:bold;animation:cursorFade .5s forwards`;document.body.appendChild(s);setTimeout(()=>s.remove(),500)});
 const style=document.createElement("style");style.textContent="@keyframes cursorFade{to{transform:translateY(-15px) scale(.2);opacity:0}}.intro-exit{animation:introExit .55s forwards}@keyframes introExit{to{transform:scale(1.04);filter:brightness(2);opacity:0}}";document.head.appendChild(style);
 loadOpened();
 

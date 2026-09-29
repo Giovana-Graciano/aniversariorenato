@@ -11,7 +11,7 @@
 <script>
 const CODE="RENATO-ADMIN-2026", $=s=>document.querySelector(s);let cards=[];
 $("#gate").onsubmit=e=>{e.preventDefault();if($("#code").value===CODE){$("#gate").classList.add("hidden");$("#panel").classList.remove("hidden")}else $("#error").textContent="ACCESS DENIED"};
-$("#files").onchange=async e=>{for(const f of e.target.files){try{const c=JSON.parse(await f.text());if(c.id&&c.nome&&c.mensagem)cards.push(c)}catch(_){}}render()};
+$("#files").onchange=async e=>{for(const f of e.target.files){try{const c=JSON.parse(await f.text());if(c.id&&c.nome&&c.mensagem&&(!c.type||c.type==="renatinho-birthday-card"))cards.push(c)}catch(_){}}render()};
 function render(){$("#list").innerHTML=cards.map((c,i)=>`<div style="background:#111;color:#fff;padding:8px;font:10px monospace;display:flex;justify-content:space-between"><span><b>${c.nome}</b> — ${c.titulo}</span><button data-i="${i}">REMOVE</button></div>`).join("");$("#list").querySelectorAll("button").forEach(b=>b.onclick=()=>{cards.splice(+b.dataset.i,1);render()})}
 $("#export").onclick=()=>{if(!cards.length){$("#status").textContent="NENHUM CARTÃO";return}const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(cards,null,2)],{type:"application/json"}));a.download="cards.json";a.click();$("#status").textContent="★ SUBSTITUA cards/cards.json NO GITHUB ★"};
 document.querySelector('#panel')?.insertAdjacentHTML('afterend','');

@@ -1,13 +1,8 @@
-MUSIC BOX — DEPLOYMENT NOTE
+MUSIC LIBRARY — DEPLOYMENT NOTE
 
-The Music Box tracks are embedded directly in create.html as data:audio/mpeg.
-Generated friend cards embed their selected audio in the JSON.
+As músicas disponíveis para os amigos ficam em music-library.json.
+Os cartões exportados NÃO incorporam arquivos de música. Eles guardam apenas a referência à música cadastrada no site ou um link do Spotify.
 
-Therefore the audio/ and audio_mp3/ folders are NOT required for this version.
+Não existe upload de MP3/WAV na Card Factory.
 
-For GitHub Pages, upload the CONTENTS of this folder to the repository root:
-index.html, create.html, script.js, style.css, admin.html, love-file.json, etc.
-Do not upload this ZIP itself as the website.
-
-A friend's own audio file is embedded in the generated card JSON, so it also
-does not need a separate audio folder.
+Para publicar no GitHub Pages, mantenha music-library.json no mesmo nível de index.html e mantenha cards/cards.json no diretório cards/.

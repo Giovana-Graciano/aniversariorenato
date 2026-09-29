@@ -117,3 +117,12 @@ This is a test build only; the original V26 remains unchanged.
 - Local Music Box files resolve against the deployed page URL.
 - Added audio error feedback and a live music status in Card Factory.
 - No GIF functionality added.
+
+## V44 — scalable Friend Card Factory
+- Photo uploads in Card Factory now use real file inputs and work with click/touch on desktop and mobile.
+- Up to 3 photos can be replaced or removed; images are resized/compressed in the browser before export.
+- Local MP3/WAV upload was removed. Friends can choose a built-in site track or provide a Spotify link.
+- Built-in music is stored in `music-library.json`; exported cards store only the track ID, not the audio file.
+- Friend cards export as individual `.json` files using the `renatinho-birthday-card` schema.
+- Published cards are consolidated in `cards/cards.json`; the public site automatically uses the number of published cards as its total.
+- The desktop pointer sparkle effect is disabled on touch/coarse-pointer devices for smoother mobile scrolling.
